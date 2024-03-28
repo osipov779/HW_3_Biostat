@@ -1,0 +1,187 @@
+---
+title: "HW_3_Osipov_AV"
+output: html_document
+date: "2024-03-27"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readxl)
+```
+
+## Загрузка и преобразование данных
+
+```{r cars}
+pima <- read_excel(path = 'pima.xlsx')
+pima <- na.omit(pima)
+pima <- pima %>%
+    mutate_at(vars(diabetes), as.factor)
+```
+
+## Просчитать описательные статистики. Для количественной переменной рассчитайте число наблюдений, среднее, стандартное отклонение, 1-й и 3-й квартили, минимум и максимум. Для категориальной переменной определите абсолютную и относительные частоты.
+
+## 1. Рассчитайте описательные статистики для переменных glucose, pressure, mass.
+
+```{r pressure, echo=FALSE}
+# Расчет основных статистик для каждой переменной:
+summary_stats <- summary(pima[, c("glucose", "pressure", "mass")])
+
+# Расчет стандартного отклонения для каждой переменной:
+glucose_sd <- sd(pima$glucose, na.rm = TRUE)
+pressure_sd <- sd(pima$pressure, na.rm = TRUE)
+mass_sd <- sd(pima$mass, na.rm = TRUE)
+
+# Вывод результатов:
+print(summary_stats)
+
+cat("glucose", glucose_sd, "\n")
+cat("pressure", pressure_sd, "\n")
+cat("pressure", mass_sd, "\n")
+```
+
+```{r}
+# Для количественной переменной
+quantitative_variable <- c(10, 15, 20, 25, 30) # Замените это на ваши данные
+
+# Число наблюдений
+n <- length(quantitative_variable)
+
+# Среднее
+mean_value <- mean(quantitative_variable)
+
+# Стандартное отклонение
+sd_value <- sd(quantitative_variable)
+
+# Квартили
+q1 <- quantile(quantitative_variable, 0.25)
+q3 <- quantile(quantitative_variable, 0.75)
+
+# Минимум и максимум
+min_value <- min(quantitative_variable)
+max_value <- max(quantitative_variable)
+
+# Вывод результатов
+cat("Число наблюдений:", n, "\n")
+cat("Среднее:", mean_value, "\n")
+cat("Стандартное отклонение:", sd_value, "\n")
+cat("1-й квартиль:", q1, "\n")
+cat("3-й квартиль:", q3, "\n")
+cat("Минимум:", min_value, "\n")
+cat("Максимум:", max_value, "\n")
+
+# Для категориальной переменной
+categorical_variable <- c("A", "B", "A", "C", "B") # Замените это на ваши данные
+
+# Абсолютные частоты
+absolute_freq <- table(categorical_variable)
+
+# Относительные частоты
+relative_freq <- prop.table(absolute_freq)
+
+# Вывод результатов
+cat("Абсолютные частоты:\n")
+print(absolute_freq)
+cat("\nОтносительные частоты:\n")
+print(relative_freq)
+
+```
+
+## 2. Рассчитайте описательную статистику для переменной diabetes.
+
+```{r}
+# Расчет абсолютных частот:
+absolute_freq <- table(pima$diabetes)
+
+# Расчет относительных частот:
+relative_freq <- prop.table(absolute_freq) * 100
+
+# Вывод результатов:
+cat("Абсолютные частоты:\n")
+absolute_freq
+cat("\nОтносительные частоты:\n")
+relative_freq
+```
+
+## Создайте на основе переменной age новую переменную age_group, которая будет отражать следующие возрастные группы: 21–35, 36–49 и 50+. Посчитайте описательную статистику для новой переменной.
+
+```{r}
+pima <- pima %>%
+  mutate(age_group = ifelse(age <= 35, "21-35",
+  ifelse(age <= 49, "36-49", "50+")))
+
+pima <- mutate(pima, age_group = as.factor(age_group))
+
+abs_age <- table(pima$age_group)
+rel_age <- (abs_age / length(pima$age_group)) * 100
+
+cat("Абсолютные частоты:\n")
+abs_age
+cat("\nОтносительные частоты:\n")
+rel_age
+```
+
+## 3. Определите 90% доверительный интервал для переменной pedigree
+
+```{r}
+# Создание подвыборки данных для переменной pedigree (может потребоваться преобразование данных в числовой формат)
+pedigree_data <- as.numeric(pima$pedigree)
+
+# Рассчет доверительного интервала
+confidence_interval <- t.test(pedigree_data, conf.level = 0.90)$conf.int
+
+cat("\nДоверительный интервал:\n")
+print(confidence_interval)
+```
+
+## 4. Постройте график плотности вероятности для переменной glucose и отметьте на нем среднее значение. Для той же переменной постройте гистограмму. Постройте два ящика с усами для значений pos и neg соответственно переменной diabetes
+
+```{r}
+dens <- ggplot(data = pima) +
+  geom_density(aes(glucose)) +
+  geom_vline(xintercept = mean(pima$glucose), color = 'red') +
+  labs(title = "График плотности вероятности glucose")
+print(dens)
+```
+
+```{r}
+box <- ggplot(data = pima) +
+  geom_boxplot(aes(diabetes, glucose, fill = diabetes)) +
+  labs(title = "Распределение наличия диабета")
+print(box)
+```
+
+## 5. Постройте на одном графике две диаграммы рассеяния для наличия или отсутствия диабета. По оси X представьте значения обхвата трицепса, а по оси Y — массу тела. Выполните окрашивание, заливку и группирование по переменной diabetes.
+
+```{r}
+# Удаление строк, где обхват трицепса или масса тела равны нулю
+pima_clean <- subset(pima, triceps != 0 & mass != 0)
+# Построение графика
+facet <- ggplot(data = pima_clean,
+                aes(x = triceps, y = mass)) +
+  geom_point(color = "black", shape = 21, size = 4,
+             aes(fill = factor(pima_clean$diabetes))) +
+  scale_fill_manual(values = c("pink", "lightgreen")) +
+  facet_grid(. ~ diabetes) +
+  labs(title = "Диаграмма рассеяния диабета",
+       x = "Обхват трицепса", y = "Масса тела") +
+  theme_light()
+
+print(facet)
+```
+
+##### Необходимо выполнить следующие пункты: 
+
+##### Рассчитайте описательные статистики для переменных glucose, pressure, mass. — 1 балл
+
+##### Рассчитайте описательную статистику для переменной diabetes. Создайте на основе переменной age новую переменную age_group, которая будет отражать следующие возрастные группы: 21–35, 36–49 и 50+. Посчитайте описательную статистику для новой переменной. — 1 балл
+
+##### Определите 90% доверительный интервал для переменной pedigree. — 2 балла
+
+##### Постройте график плотности вероятности для переменной glucose и отметьте на нем среднее значение. Для той же переменной постройте гистограмму. Постройте два ящика с усами для значений pos и neg соответственно переменной diabetes. — 3 балла
+
+##### Постройте на одном графике две диаграммы рассеяния для наличия или отсутствия диабета. По оси X представьте значения обхвата трицепса, а по оси Y — массу тела. Выполните окрашивание, заливку и группирование по переменной diabetes. — 3 балла
+
+##### Загрузите файлы на GitHub, в форму приложите ссылку на него. Назовите RMarkdown-файл своими ФИО.
+
+##### Что нужно отправить: ссылку на репозиторий, который будет содержать RMarkdown-файл с вашим решением.
